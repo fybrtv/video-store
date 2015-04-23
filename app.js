@@ -6,24 +6,12 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var multer = require('multer');
 var routes = require('./routes/index');
+var redis = require('redis');
+var session = require('express-session');
+var RedisStore = require('connect-redis')(session);
 
 var app = express();
-app.use(multer({ dest: './uploads/',
-    rename: function (fieldname, filename) {
-        return filename+Date.now();
-    },
-    onFileUploadStart: function (file) {
-      console.log(file.originalname + ' is starting ...')
-    },
-    onFileUploadComplete: function (file) {
-      console.log(file.fieldname + ' uploaded to  ' + file.path)
-      done=true;
-    },
-    onError: function (error, next) {
-      console.log(error)
-      next(error)
-    }
-    }));
+
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 app.set('port', 8080)
@@ -38,9 +26,35 @@ app.use(function(req, res, next) {
 });
 
 app.use(logger('dev'));
+app.use(cookieParser());
+app.use(session({ resave: true,
+                  store: new RedisStore({
+                    host: '127.0.0.1',
+                    port: 6379,
+                    prefix: 'sess'
+                  }),
+                  saveUninitialized: true,
+                  secret: 'fybriseverything' }));
+app.use(multer({ dest: './uploads/',
+    rename: function (fieldname, filename) {
+        return filename+Date.now();
+    },
+    onFileUploadStart: function (file, response) {
+      console.log(response.body)
+      console.log(file.originalname + ' is starting ...')
+    },
+    onFileUploadComplete: function (file, req, res) {
+      console.log(file)
+      console.log(file.fieldname + ':' + req.session.seriesId + ' uploaded to  ' + file.path)
+      done=true;
+    },
+    onError: function (error, next) {
+      console.log(error)
+      next(error)
+    }
+    }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/upload', routes.uploadPOST);
