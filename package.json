@@ -12,10 +12,12 @@
     "debug": "~2.1.1",
     "express": "~4.11.1",
     "express-session": "^1.11.1",
+    "fluent-ffmpeg": "^2.0.0-rc3",
     "jade": "^1.9.2",
     "morgan": "~1.5.1",
     "multer": "^0.1.8",
     "redis": "^0.12.1",
+    "request": "^2.55.0",
     "serve-favicon": "~2.2.0"
   }
 }
