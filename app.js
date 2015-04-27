@@ -67,14 +67,11 @@ app.use(multer({ dest: './uploads/',
     onFileUploadComplete: function (file, req, res) {
       var episodeName = req.body.episodeName;
       var seriesId = req.body.seriesId;
-      console.log('series Id' + req.body.seriesId)
       //get length of file w/ ffmpeg
 
       var command = ffmpeg(file.path);
       command.ffprobe(0, function(err, data) {
         if(err) throw err;
-        console.log('metadata: '+file.path);
-        console.dir(data);
         var duration = data.format.duration || 0;
         duration = (duration/60).toFixed(3);
         var dataVid = {
@@ -83,7 +80,6 @@ app.use(multer({ dest: './uploads/',
           fileName: file.filename,
           lengthOfFile: duration
         }
-        console.log('datavid' + JSON.stringify(dataVid));
         request.post({url: "http://localhost:5000/videos", form: dataVid}, function(err,response, body){
           if (err) console.log(err);
           console.log(file.fieldname+  ' uploaded to  ' + file.path);
