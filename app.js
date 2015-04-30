@@ -12,6 +12,7 @@ var redis = require('redis');
 var session = require('express-session');
 var RedisStore = require('connect-redis')(session);
 var ffmpeg = require('fluent-ffmpeg');
+var objectid = require('objectid');
 
 var app = express();
 
@@ -43,8 +44,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(multer({ dest: './uploads/',
-    rename: function (fieldname, filename) {
-        return filename+Date.now();
+    rename: function (fieldname, filename, req, res) {
+      var id = objectid();
+      return id.toString();
     },
     onParseStart: function() {
 
@@ -70,11 +72,13 @@ app.use(multer({ dest: './uploads/',
       //get length of file w/ ffmpeg
 
       var command = ffmpeg(file.path);
+      var fileId = file.name.split(".")[0];
       command.ffprobe(0, function(err, data) {
         if(err) throw err;
         var duration = data.format.duration || 0;
         duration = (duration/60).toFixed(3);
         var dataVid = {
+          fileId: fileId,
           episodeName: episodeName,
           seriesId: seriesId,
           fileName: file.filename,
@@ -89,10 +93,6 @@ app.use(multer({ dest: './uploads/',
         })
       });
 
-      
-
-
-    
     },
     onError: function (error, next) {
       console.log(error)
