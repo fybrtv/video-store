@@ -13,22 +13,16 @@ var session = require('express-session');
 var RedisStore = require('connect-redis')(session);
 var ffmpeg = require('fluent-ffmpeg');
 var objectid = require('objectid');
-
+var exec = require('child_process').exec;
 var app = express();
-
+var cors = require('cors');
+app.use(cors())
+app.use('/uploads',express.static('uploads'));
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 app.set('port', 8080)
 // uncomment after placing your favicon in /public
 //app.use(favicon(__dirname + '/public/favicon.ico'));
-
-app.use(function(req, res, next) {
-  res.header("Content-Type", "multipart/form-data");
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Cache-Control, X-Requested-With");
-  next();
-});
-
 app.use(logger('dev'));
 app.use(cookieParser());
 app.use(session({ resave: false,
@@ -43,7 +37,7 @@ app.use(session({ resave: false,
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(multer({ dest: './uploads/',
+app.use(multer({ dest: './uploads//',
     rename: function (fieldname, filename, req, res) {
       var id = objectid();
       return id.toString();
@@ -69,8 +63,7 @@ app.use(multer({ dest: './uploads/',
     onFileUploadComplete: function (file, req, res) {
       var episodeName = req.body.episodeName;
       var seriesId = req.body.seriesId;
-      //get length of file w/ ffmpeg
-
+      console.log(file);    
       var command = ffmpeg(file.path);
       var fileId = file.name.split(".")[0];
       command.ffprobe(0, function(err, data) {
@@ -81,18 +74,51 @@ app.use(multer({ dest: './uploads/',
           fileId: fileId,
           episodeName: episodeName,
           seriesId: seriesId,
-          fileName: file.filename,
+          fileName: file.name,
           lengthOfFile: duration
         }
-        request.post({url: "http://localhost:5000/videos", form: dataVid}, function(err,response, body){
-          if (err) console.log(err);
-          console.log(file.fieldname+  ' uploaded to  ' + file.path);
-          console.log(body);
-          done=true;
-          res.send();
-        })
-      });
+        var c1 = exec('ffmpeg -codec:a libvo_aacenc -ar 44100 -ac 1 -codec:v libx264 -profile:v baseline -level 13 -b:v 2000k ./uploads/'+fileId+'_out.mp4 -i '+file.path, function(error, stdout, etderr) {
+          if (error) {
+            process.stdout.write('1',error)
+          } else {
+            c1.kill('SIGINT');
+            process.stdout.write("1"+stdout);
+            var c2 = exec('ls', function(error, stdout, etderr) {
+              if (error) {
+                process.stdout.write('1',error)
+              } else {
+                c2.kill('SIGINT');
+                var c3 = exec('ls', function(error, stdout, etderr) {
+                  if (error) {
+                    process.stdout.write('1',error)
+                  } else {
+                    c3.kill('SIGINT');
+                    var c4 = exec('MP4Box -bs-switching no -dash 10000 -profile live -segment-ext mp4 -segment-name DASH_%s -out ./uploads/'+fileId+'_dash.mpd ./uploads/'+fileId+'_out.mp4#video ./uploads/'+fileId+'_out.mp4#audio', function(error, stdout, etderr) {
+                      if (error) {
+                        process.stdout.write(error)
+                      } else {
+                        c4.kill('SIGINT');
+                        process.stdout.write("2"+stdout);
+                          request.post({url: "http://localhost:5000/videos", form: dataVid}, function(err,response, body){
+                            if (err) console.log(err);
+                            console.log(file.fieldname+  ' uploaded to  ' + file.path);
+                            console.log(body);
+                            done=true;
+                            res.send();
+                          })
+                          }
+                    });
+                  }
+                });
+              }
+            });
+          }
 
+
+        });
+        
+        
+      });
     },
     onError: function (error, next) {
       console.log(error)
@@ -123,6 +149,7 @@ app.use(function(err, req, res, next) {
         error: {}
     });
 });
+
 app.listen(app.get("port"), function() {
     console.log("Video Store listening on port "+app.get("port"))
 });
