@@ -77,7 +77,7 @@ app.use(multer({ dest: './uploads//',
           fileName: file.name,
           lengthOfFile: duration
         }
-        var c1 = exec('ffmpeg -codec:a libvo_aacenc -ar 44100 -ac 1 -codec:v libx264 -profile:v baseline -level 13 -b:v 2000k ./uploads/'+fileId+'_out.mp4 -i '+file.path, function(error, stdout, etderr) {
+        var c1 = exec('ffmpeg -codec:a libvo_aacenc -ar 44100 -ac 1 -codec:v libx264 -profile:v baseline -crf 50 -preset ultrafast -level 13 -b:v 25k ./uploads/'+fileId+'_out.mp4 -i '+file.path, function(error, stdout, etderr) {
           if (error) {
             process.stdout.write('1',error)
           } else {
